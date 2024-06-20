@@ -1,8 +1,16 @@
-include <SPI.h>
+/*
+ * Created by ArduinoGetStarted.com
+ *
+ * This example code is in the public domain
+ *
+ * Tutorial page: https://arduinogetstarted.com/tutorials/arduino-rtc
+ */
+
+#include <SPI.h>
 #include <LoRa.h>
 #include <SD.h>
-#include <DS3231.h>
 #include <Wire.h>
+#include <RTClib.h>
 
 const byte MQ4_Pin = A0;
 const int R_O = 945;
@@ -14,60 +22,80 @@ const int R_O = 945;
 #define LEDPIN 1
 
 File myFile;
+RTC_DS3231 rtc;
 
-DS3231 myRTC;
-bool century = false;
-bool h12Flag;
-bool pmFlag;
+char daysOfTheWeek[7][12] = {
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday"
+};
 
-void setup() {
-  // put your setup code here, to run once:
+void setup () {
+  Serial.begin(9600);
   pinMode(LEDPIN, OUTPUT);
-  Serial.begin(9600); 
   Wire.begin();
 
-  //while (!Serial);  
-
-/*
-  if (!LoRa.begin(915E6)) {
-    Serial.println("Starting LoRa failed!");
+  // SETUP RTC MODULE
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
     while (1);
-  } 
-*/
+  }
+
+  // automatically sets the RTC to the date & time on PC this sketch was compiled
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // manually sets the RTC with an explicit date & time, for example to set
+  // January 21, 2021 at 3am you would call:
+  // rtc.adjust(DateTime(2021, 1, 21, 3, 0, 0));
 
   if (!SD.begin(SS_PIN)) {
     Serial.println("Starting SD card failed!");
     while (1);
   }
   Serial.println("SD card initialized.");
-
 }
 
-void loop() {
+void loop () {
   digitalWrite(LEDPIN, HIGH);
   Serial.println(getMethanePPM2());
   Serial.println(getMethanePPM());
-  
-  int yr = myRTC.getYear();
-  int mon = myRTC.getMonth(century);
-  int dy = myRTC.getDate();
 
-  int hrs = myRTC.getHour(h12Flag, pmFlag);
-  int mts = myRTC.getMinute();
-  int sec = myRTC.getSecond();
+  DateTime now = rtc.now();
 
-  String currentTime = String(hrs) + ":" + String(mts) + ":" + String(sec) + "/" + String(yr) + "-" + String(mon) + "-" + String(dy);
+  int yr = now.year();
+  int mon = now.month();
+  int dt = now.day();
+
+  int hrs = now.hour();
+  int mts = now.minute();
+  int sec = now.second();
+
+  String currentTime = String(hrs) + ":" + String(mts) + ":" + String(sec);
   Serial.println(currentTime);
-  
-  
-  /*Serial.println(" ");
-  LoRa.beginPacket();
-  LoRa.print((float)max(getMethanePPM(), getMethanePPM2()));
-  LoRa.print(", ");
-  LoRa.print(currentTime);
-  LoRa.endPacket();
- */
-  
+  String currentDate = String(yr) + "-" + String(mon) + "-" + String(dt);
+  Serial.println(currentDate);
+  String currentDay = String(daysOfTheWeek[now.dayOfTheWeek()]);
+  Serial.println(currentDay);
+
+  /*Serial.print("Date & Time: ");
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(" (");
+  Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+  Serial.print(") ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.println(now.second(), DEC);*/
+
   myFile = SD.open("data.txt", FILE_WRITE);
   if (myFile) {
     //myFile.print((float)max(getMethanePPM(), getMethanePPM2()));
@@ -77,6 +105,10 @@ void loop() {
     myFile.print(", ");
     myFile.print(currentTime);
     myFile.print(", ");
+    myFile.print(currentDate);
+    myFile.print(", ");
+    myFile.print(currentDay);
+    myFile.print(", ");
     myFile.println(LoRa.packetRssi());
     //delay(500);
     myFile.close();
@@ -85,9 +117,8 @@ void loop() {
   } else {
     Serial.println("Error opening data.txt");
   }
-  
-  delay(1000);
 
+  delay(1000);
 }
 
 float getMethanePPM(){
