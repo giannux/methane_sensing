@@ -1,11 +1,3 @@
-/*
- * Created by ArduinoGetStarted.com
- *
- * This example code is in the public domain
- *
- * Tutorial page: https://arduinogetstarted.com/tutorials/arduino-rtc
- */
-
 #include <SPI.h>
 #include <LoRa.h>
 #include <SD.h>
@@ -37,6 +29,7 @@ char daysOfTheWeek[7][12] = {
 void setup () {
   Serial.begin(9600);
   pinMode(LEDPIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
   Wire.begin();
 
   // SETUP RTC MODULE
@@ -45,12 +38,6 @@ void setup () {
     Serial.flush();
     while (1);
   }
-
-  // automatically sets the RTC to the date & time on PC this sketch was compiled
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  // manually sets the RTC with an explicit date & time, for example to set
-  // January 21, 2021 at 3am you would call:
-  // rtc.adjust(DateTime(2021, 1, 21, 3, 0, 0));
 
   if (!SD.begin(SS_PIN)) {
     Serial.println("Starting SD card failed!");
@@ -61,6 +48,7 @@ void setup () {
 
 void loop () {
   digitalWrite(LEDPIN, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);
   Serial.println(getMethanePPM2());
   Serial.println(getMethanePPM());
 
@@ -81,21 +69,6 @@ void loop () {
   String currentDay = String(daysOfTheWeek[now.dayOfTheWeek()]);
   Serial.println(currentDay);
 
-  /*Serial.print("Date & Time: ");
-  Serial.print(now.year(), DEC);
-  Serial.print('/');
-  Serial.print(now.month(), DEC);
-  Serial.print('/');
-  Serial.print(now.day(), DEC);
-  Serial.print(" (");
-  Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
-  Serial.print(") ");
-  Serial.print(now.hour(), DEC);
-  Serial.print(':');
-  Serial.print(now.minute(), DEC);
-  Serial.print(':');
-  Serial.println(now.second(), DEC);*/
-
   myFile = SD.open("data.txt", FILE_WRITE);
   if (myFile) {
     //myFile.print((float)max(getMethanePPM(), getMethanePPM2()));
@@ -114,6 +87,7 @@ void loop () {
     myFile.close();
     Serial.println("Data saved to SD card.");
     digitalWrite(LEDPIN, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
   } else {
     Serial.println("Error opening data.txt");
   }
@@ -156,6 +130,8 @@ float KALMAN (float U){
   return U_hat; 
 }
 
-//source code can be found below
+//source code for mq4 sensors can be found below
 //https://www.utmel.com/components/how-to-use-mq4-gas-sensor?id=821
+//source code for rtc can be found below
+//https://arduinogetstarted.com/tutorials/arduino-rtc
 //I do not not claim ownership of this code #copyright 10-03-2023
